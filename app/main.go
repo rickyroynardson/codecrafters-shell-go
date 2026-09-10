@@ -10,10 +10,11 @@ import (
 var _ = fmt.Print
 
 func main() {
+	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("$ ")
 
-		cmd, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		cmd, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
 			os.Exit(1)
