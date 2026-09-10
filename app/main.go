@@ -14,11 +14,18 @@ func main() {
 	for {
 		fmt.Print("$ ")
 
-		cmd, err := reader.ReadString('\n')
+		c, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
 			os.Exit(1)
 		}
-		fmt.Printf("%s: command not found\n", cmd[:len(cmd)-1])
+
+		cmd := c[:len(c)-1]
+		switch cmd {
+		case "exit":
+			os.Exit(0)
+		default:
+			fmt.Printf("%s: command not found\n", cmd)
+		}
 	}
 }
