@@ -55,6 +55,13 @@ func main() {
 				fmt.Println("type: missing argument")
 				continue
 			}
+			if tokens[1] == "~" {
+				home, _ := os.UserHomeDir()
+				if err := os.Chdir(home); err != nil {
+					fmt.Printf("failed to change dir: %v\n", err)
+				}
+				continue
+			}
 			_, err := os.Stat(tokens[1])
 			if err != nil {
 				fmt.Printf("cd: %s: No such file or directory\n", tokens[1])
