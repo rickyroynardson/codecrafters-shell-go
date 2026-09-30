@@ -44,7 +44,17 @@ func main() {
 				fmt.Printf("%s: not found\n", target)
 			}
 		default:
-			fmt.Printf("%s: command not found\n", cmd)
+			_, err := exec.LookPath(tokens[0])
+			if err == nil {
+				cmd := exec.Command(tokens[0], tokens[1:]...)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					fmt.Printf("error executing command: %v\n", err)
+				}
+			} else {
+				fmt.Printf("%s: command not found\n", cmd)
+			}
 		}
 	}
 }
