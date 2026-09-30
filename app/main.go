@@ -11,7 +11,7 @@ import (
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
-	builtins := []string{"echo", "exit", "type", "pwd"}
+	builtins := []string{"echo", "exit", "type", "pwd", "cd"}
 
 	for {
 		fmt.Print("$ ")
@@ -47,8 +47,22 @@ func main() {
 			wd, err := os.Getwd()
 			if err != nil {
 				fmt.Printf("error getting current directory: %v\n", err)
+				continue
 			}
 			fmt.Printf("%s\n", wd)
+		case "cd":
+			if len(tokens) < 2 {
+				fmt.Println("type: missing argument")
+				continue
+			}
+			_, err := os.Stat(tokens[1])
+			if err != nil {
+				fmt.Printf("cd: %s: No such file or directory\n", tokens[1])
+				continue
+			}
+			if err := os.Chdir(tokens[1]); err != nil {
+				fmt.Printf("failed to change dir: %v\n", err)
+			}
 		default:
 			_, err := exec.LookPath(tokens[0])
 			if err == nil {
