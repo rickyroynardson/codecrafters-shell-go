@@ -43,6 +43,7 @@ func main() {
 	}
 }
 
+// alternative: use shlex library to parse
 func parseFields(cmd string) []string {
 	var fields []string
 	var field strings.Builder
