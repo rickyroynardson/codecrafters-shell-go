@@ -60,6 +60,10 @@ func parseFields(cmd string) []string {
 			continue
 		}
 		if quote != 0 {
+			if r == '\\' {
+				escaped = true
+				continue
+			}
 			if r == quote {
 				quote = 0
 			} else {
