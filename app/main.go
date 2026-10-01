@@ -31,34 +31,48 @@ func main() {
 			os.Exit(0)
 		}
 
-		var out io.Writer = os.Stdout
-		var outFile *os.File
+		var out, errOut io.Writer = os.Stdout, os.Stderr
+		var files []*os.File
+		var args []string
+		failed := false
 
-		i := slices.IndexFunc(fields, func(f string) bool { return f == ">" || f == "1>" })
-		if i != -1 && i+1 < len(fields) {
-			f, err := os.Create(fields[i+1])
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+		for i := 0; i < len(fields); i++ {
+			op := fields[i]
+			if (op == ">" || op == "1>" || op == "2>") && i+1 < len(fields) {
+				f, err := os.Create(fields[i+1])
+				if err != nil {
+					fmt.Fprintln(errOut, err)
+					failed = true
+					break
+				}
+				files = append(files, f)
+				if op == "2>" {
+					errOut = f
+				} else {
+					out = f
+				}
+				i++
 				continue
 			}
-			outFile, out = f, f
-			fields = fields[:i]
+			args = append(args, op)
 		}
 
-		if slices.Contains(builtins, fields[0]) {
-			handleCommand(fields, out)
-		} else if _, err := exec.LookPath(fields[0]); err == nil {
-			cmd := exec.Command(fields[0], fields[1:]...)
-			cmd.Stdin = os.Stdin
-			cmd.Stdout = out
-			cmd.Stderr = os.Stderr
-			cmd.Run()
-		} else {
-			fmt.Printf("%s: command not found\n", fields[0])
+		if !failed && len(args) > 0 {
+			if slices.Contains(builtins, args[0]) {
+				handleCommand(args, out, errOut)
+			} else if _, err := exec.LookPath(args[0]); err == nil {
+				cmd := exec.Command(args[0], args[1:]...)
+				cmd.Stdin = os.Stdin
+				cmd.Stdout = out
+				cmd.Stderr = errOut
+				cmd.Run()
+			} else {
+				fmt.Fprintf(errOut, "%s: command not found\n", args[0])
+			}
 		}
 
-		if outFile != nil {
-			outFile.Close()
+		for _, f := range files {
+			f.Close()
 		}
 	}
 }
@@ -124,7 +138,7 @@ func parseFields(cmd string) []string {
 	return fields
 }
 
-func handleType(cmd string, out io.Writer) {
+func handleType(cmd string, out, errOut io.Writer) {
 	if slices.Contains(builtins, cmd) {
 		fmt.Fprintf(out, "%s is a shell builtin\n", cmd)
 		return
@@ -132,17 +146,17 @@ func handleType(cmd string, out io.Writer) {
 		fmt.Fprintf(out, "%s is %s\n", cmd, path)
 		return
 	}
-	fmt.Fprintf(os.Stderr, "%s: not found\n", cmd)
+	fmt.Fprintf(errOut, "%s: not found\n", cmd)
 }
 
-func handleCommand(fields []string, out io.Writer) {
+func handleCommand(fields []string, out, errOut io.Writer) {
 	switch fields[0] {
 	case "exit":
 		os.Exit(0)
 	case "echo":
 		fmt.Fprintln(out, strings.Join(fields[1:], " "))
 	case "type":
-		handleType(fields[1], out)
+		handleType(fields[1], out, errOut)
 	case "pwd":
 		wd, _ := os.Getwd()
 		fmt.Fprintln(out, wd)
@@ -150,7 +164,7 @@ func handleCommand(fields []string, out io.Writer) {
 		path := fields[1]
 		path = strings.Replace(path, "~", os.Getenv("HOME"), 1)
 		if err := os.Chdir(path); err != nil {
-			fmt.Fprintf(os.Stderr, "cd: %s: No such file or directory\n", path)
+			fmt.Fprintf(errOut, "cd: %s: No such file or directory\n", path)
 		}
 	}
 }
