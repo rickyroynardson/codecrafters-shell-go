@@ -38,8 +38,12 @@ func main() {
 
 		for i := 0; i < len(fields); i++ {
 			op := fields[i]
-			if (op == ">" || op == "1>" || op == "2>") && i+1 < len(fields) {
-				f, err := os.Create(fields[i+1])
+			if (op == ">" || op == "1>" || op == "2>" || op == ">>" || op == "1>>") && i+1 < len(fields) {
+				flag := os.O_TRUNC
+				if op == ">>" || op == "1>>" {
+					flag = os.O_APPEND
+				}
+				f, err := os.OpenFile(fields[i+1], os.O_CREATE|os.O_WRONLY|flag, 0644)
 				if err != nil {
 					fmt.Fprintln(errOut, err)
 					failed = true
