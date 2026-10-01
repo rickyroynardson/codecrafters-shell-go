@@ -23,7 +23,7 @@ func main() {
 		}
 
 		cmd = strings.TrimSpace(cmd)
-		fields := strings.Fields(cmd)
+		fields := parseFields(cmd)
 
 		if len(fields) == 0 {
 			os.Exit(0)
@@ -41,6 +41,46 @@ func main() {
 			fmt.Printf("%s: command not found\n", fields[0])
 		}
 	}
+}
+
+func parseFields(cmd string) []string {
+	var fields []string
+	var field strings.Builder
+	var quote rune
+	inField := false
+
+	for _, r := range cmd {
+		if quote != 0 {
+			if r == quote {
+				quote = 0
+			} else {
+				field.WriteRune(r)
+			}
+			inField = true
+			continue
+		}
+		if r == '\'' || r == '"' {
+			quote = r
+			inField = true
+			continue
+		}
+		if r == ' ' || r == '\t' {
+			if inField {
+				fields = append(fields, field.String())
+				field.Reset()
+				inField = false
+			}
+			continue
+		}
+		field.WriteRune(r)
+		inField = true
+	}
+
+	if inField {
+		fields = append(fields, field.String())
+	}
+
+	return fields
 }
 
 func handleType(cmd string) {
