@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"slices"
@@ -30,16 +31,34 @@ func main() {
 			os.Exit(0)
 		}
 
+		var out io.Writer = os.Stdout
+		var outFile *os.File
+
+		i := slices.IndexFunc(fields, func(f string) bool { return f == ">" || f == "1>" })
+		if i != -1 && i+1 < len(fields) {
+			f, err := os.Create(fields[i+1])
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				continue
+			}
+			outFile, out = f, f
+			fields = fields[:i]
+		}
+
 		if slices.Contains(builtins, fields[0]) {
-			handleCommand(fields)
+			handleCommand(fields, out)
 		} else if _, err := exec.LookPath(fields[0]); err == nil {
 			cmd := exec.Command(fields[0], fields[1:]...)
 			cmd.Stdin = os.Stdin
-			cmd.Stdout = os.Stdout
+			cmd.Stdout = out
 			cmd.Stderr = os.Stderr
 			cmd.Run()
 		} else {
 			fmt.Printf("%s: command not found\n", fields[0])
+		}
+
+		if outFile != nil {
+			outFile.Close()
 		}
 	}
 }
@@ -105,33 +124,33 @@ func parseFields(cmd string) []string {
 	return fields
 }
 
-func handleType(cmd string) {
+func handleType(cmd string, out io.Writer) {
 	if slices.Contains(builtins, cmd) {
-		fmt.Printf("%s is a shell builtin\n", cmd)
+		fmt.Fprintf(out, "%s is a shell builtin\n", cmd)
 		return
 	} else if path, err := exec.LookPath(cmd); err == nil {
-		fmt.Printf("%s is %s\n", cmd, path)
+		fmt.Fprintf(out, "%s is %s\n", cmd, path)
 		return
 	}
-	fmt.Printf("%s: not found\n", cmd)
+	fmt.Fprintf(os.Stderr, "%s: not found\n", cmd)
 }
 
-func handleCommand(fields []string) {
+func handleCommand(fields []string, out io.Writer) {
 	switch fields[0] {
 	case "exit":
 		os.Exit(0)
 	case "echo":
-		fmt.Println(strings.Join(fields[1:], " "))
+		fmt.Fprintln(out, strings.Join(fields[1:], " "))
 	case "type":
-		handleType(fields[1])
+		handleType(fields[1], out)
 	case "pwd":
 		wd, _ := os.Getwd()
-		fmt.Println(wd)
+		fmt.Fprintln(out, wd)
 	case "cd":
 		path := fields[1]
 		path = strings.Replace(path, "~", os.Getenv("HOME"), 1)
 		if err := os.Chdir(path); err != nil {
-			fmt.Printf("cd: %s: No such file or directory\n", path)
+			fmt.Fprintf(os.Stderr, "cd: %s: No such file or directory\n", path)
 		}
 	}
 }
