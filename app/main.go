@@ -38,9 +38,9 @@ func main() {
 
 		for i := 0; i < len(fields); i++ {
 			op := fields[i]
-			if (op == ">" || op == "1>" || op == "2>" || op == ">>" || op == "1>>") && i+1 < len(fields) {
+			if (op == ">" || op == "1>" || op == "2>" || op == ">>" || op == "1>>" || op == "2>>") && i+1 < len(fields) {
 				flag := os.O_TRUNC
-				if op == ">>" || op == "1>>" {
+				if op == ">>" || op == "1>>" || op == "2>>" {
 					flag = os.O_APPEND
 				}
 				f, err := os.OpenFile(fields[i+1], os.O_CREATE|os.O_WRONLY|flag, 0644)
@@ -50,7 +50,7 @@ func main() {
 					break
 				}
 				files = append(files, f)
-				if op == "2>" {
+				if op == "2>" || op == "2>>" {
 					errOut = f
 				} else {
 					out = f
