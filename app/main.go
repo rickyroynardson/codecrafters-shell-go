@@ -24,6 +24,7 @@ func main() {
 
 		cmd = strings.TrimSpace(cmd)
 		fields := parseFields(cmd)
+		// fields, _ := shlex.Split(cmd)
 
 		if len(fields) == 0 {
 			os.Exit(0)
@@ -49,14 +50,26 @@ func parseFields(cmd string) []string {
 	var field strings.Builder
 	var quote rune
 	inField := false
+	escaped := false
 
 	for _, r := range cmd {
+		if escaped {
+			field.WriteRune(r)
+			inField = true
+			escaped = false
+			continue
+		}
 		if quote != 0 {
 			if r == quote {
 				quote = 0
 			} else {
 				field.WriteRune(r)
 			}
+			inField = true
+			continue
+		}
+		if r == '\\' {
+			escaped = true
 			inField = true
 			continue
 		}
@@ -75,6 +88,10 @@ func parseFields(cmd string) []string {
 		}
 		field.WriteRune(r)
 		inField = true
+	}
+
+	if escaped {
+		field.WriteRune('\\')
 	}
 
 	if inField {
