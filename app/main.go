@@ -1,23 +1,38 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"slices"
 	"strings"
+
+	"github.com/chzyer/readline"
 )
 
 var builtins = []string{"echo", "exit", "type", "pwd", "cd"}
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("$ ")
+	completer := readline.NewPrefixCompleter()
+	for _, b := range builtins {
+		completer.Children = append(completer.Children, readline.PcItem(b))
+	}
 
-		cmd, err := reader.ReadString('\n')
+	cfg := &readline.Config{
+		Prompt:       "$ ",
+		AutoComplete: completer,
+	}
+
+	rl, err := readline.NewEx(cfg)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error readline:", err)
+		os.Exit(1)
+	}
+	defer rl.Close()
+
+	for {
+		cmd, err := rl.Readline()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
 			os.Exit(1)
