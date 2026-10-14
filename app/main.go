@@ -40,7 +40,7 @@ func main() {
 		files, _ := os.ReadDir(path)
 		for _, f := range files {
 			if !f.IsDir() && !strings.HasPrefix(f.Name(), ".") && !slices.Contains(builtins, f.Name()) {
-				completer.Children = append(completer.Children, readline.PcItem(name))
+				completer.Children = append(completer.Children, readline.PcItem(f.Name()))
 			}
 		}
 	}
