@@ -39,9 +39,8 @@ func main() {
 	for _, path := range paths {
 		files, _ := os.ReadDir(path)
 		for _, f := range files {
-			i, _ := f.Info()
-			if !i.IsDir() && i.Mode().Perm()&0111 != 0 {
-				completer.Children = append(completer.Children, readline.PcItem(i.Name()))
+			if !f.IsDir() && !strings.HasPrefix(f.Name(), ".") && !slices.Contains(builtins, f.Name()) {
+				completer.Children = append(completer.Children, readline.PcItem(name))
 			}
 		}
 	}
