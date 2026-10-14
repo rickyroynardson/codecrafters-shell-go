@@ -35,20 +35,13 @@ func main() {
 		completer.Children = append(completer.Children, readline.PcItem(b))
 	}
 
-	p, _ := filepath.Abs(os.Getenv("PATH"))
-	paths := strings.SplitSeq(p, ":")
-	for path := range paths {
-		files, err := os.ReadDir(path)
-		if err != nil {
-			continue
-		}
+	paths := filepath.SplitList(os.Getenv("PATH"))
+	for _, path := range paths {
+		files, _ := os.ReadDir(path)
 		for _, f := range files {
-			if f.IsDir() {
-				continue
-			}
-			name := f.Name()
-			if !strings.HasPrefix(name, ".") && !slices.Contains(builtins, name) {
-				completer.Children = append(completer.Children, readline.PcItem(name))
+			i, _ := f.Info()
+			if !i.IsDir() && i.Mode().Perm()&0111 != 0 {
+				completer.Children = append(completer.Children, readline.PcItem(i.Name()))
 			}
 		}
 	}
