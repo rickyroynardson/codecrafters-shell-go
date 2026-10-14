@@ -15,47 +15,65 @@ import (
 var builtins = []string{"echo", "exit", "type", "pwd", "cd"}
 
 type Completer struct {
-	Inner readline.AutoCompleter
-	Out   io.Writer
+	Names    []string
+	lastLine string
 }
 
-func (c Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
-	new, length := c.Inner.Do(line, pos)
-
-	if len(new) == 0 {
-		io.WriteString(c.Out, "\a")
+func (c *Completer) Do(line []rune, pos int) ([][]rune, int) {
+	prefix := string(line[:pos])
+	var matches []string
+	for _, n := range c.Names {
+		if strings.HasPrefix(n, prefix) {
+			matches = append(matches, n)
+		}
 	}
 
-	return new, length
+	switch {
+	case len(matches) == 0:
+		os.Stdout.WriteString("\a")
+	case len(matches) == 1:
+		c.lastLine = ""
+		return [][]rune{[]rune(matches[0][len(prefix):] + " ")}, len(prefix)
+	default:
+		lcp := matches[0]
+		for _, m := range matches[1:] {
+			for !strings.HasPrefix(m, lcp) {
+				lcp = lcp[:len(lcp)-1]
+			}
+		}
+		if len(lcp) > len(prefix) {
+			c.lastLine = ""
+			return [][]rune{[]rune(lcp[len(prefix):])}, len(prefix)
+		}
+		if c.lastLine == prefix { // second tab: list
+			fmt.Printf("\r\n%s\r\n$ %s", strings.Join(matches, " "), prefix)
+			c.lastLine = ""
+			return nil, 0
+		}
+		os.Stdout.WriteString("\a") // first tab: bell
+		c.lastLine = prefix
+	}
+	return nil, 0
+}
+
+func commandNames() []string {
+	names := slices.Clone(builtins)
+	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+		files, _ := os.ReadDir(dir)
+		for _, f := range files {
+			if !f.IsDir() && !strings.HasPrefix(f.Name(), ".") {
+				names = append(names, f.Name())
+			}
+		}
+	}
+	slices.Sort(names)
+	return slices.Compact(names)
 }
 
 func main() {
-	completer := readline.NewPrefixCompleter()
-	for _, b := range builtins {
-		completer.Children = append(completer.Children, readline.PcItem(b))
-	}
-
-	p, _ := filepath.Abs(os.Getenv("PATH"))
-	paths := strings.SplitSeq(p, ":")
-	for path := range paths {
-		files, err := os.ReadDir(path)
-		if err != nil {
-			continue
-		}
-		for _, f := range files {
-			if f.IsDir() {
-				continue
-			}
-			name := f.Name()
-			if !strings.HasPrefix(name, ".") && !slices.Contains(builtins, name) {
-				completer.Children = append(completer.Children, readline.PcItem(name))
-			}
-		}
-	}
-
 	cfg := &readline.Config{
 		Prompt:       "$ ",
-		AutoComplete: Completer{Inner: completer, Out: os.Stdout},
+		AutoComplete: &Completer{Names: commandNames()},
 	}
 
 	rl, err := readline.NewEx(cfg)
