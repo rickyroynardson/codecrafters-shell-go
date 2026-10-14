@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -32,6 +33,24 @@ func main() {
 	completer := readline.NewPrefixCompleter()
 	for _, b := range builtins {
 		completer.Children = append(completer.Children, readline.PcItem(b))
+	}
+
+	p, _ := filepath.Abs(os.Getenv("PATH"))
+	paths := strings.SplitSeq(p, ":")
+	for path := range paths {
+		files, err := os.ReadDir(path)
+		if err != nil {
+			continue
+		}
+		for _, f := range files {
+			if f.IsDir() {
+				continue
+			}
+			name := f.Name()
+			if !strings.HasPrefix(name, ".") && !slices.Contains(builtins, name) {
+				completer.Children = append(completer.Children, readline.PcItem(name))
+			}
+		}
 	}
 
 	cfg := &readline.Config{
