@@ -13,6 +13,21 @@ import (
 
 var builtins = []string{"echo", "exit", "type", "pwd", "cd"}
 
+type Completer struct {
+	Inner readline.AutoCompleter
+	Out   io.Writer
+}
+
+func (c Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	new, length := c.Inner.Do(line, pos)
+
+	if len(new) == 0 {
+		io.WriteString(c.Out, "\a")
+	}
+
+	return new, length
+}
+
 func main() {
 	completer := readline.NewPrefixCompleter()
 	for _, b := range builtins {
@@ -21,7 +36,7 @@ func main() {
 
 	cfg := &readline.Config{
 		Prompt:       "$ ",
-		AutoComplete: completer,
+		AutoComplete: Completer{Inner: completer, Out: os.Stdout},
 	}
 
 	rl, err := readline.NewEx(cfg)
