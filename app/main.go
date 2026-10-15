@@ -21,10 +21,30 @@ type Completer struct {
 
 func (c *Completer) Do(line []rune, pos int) ([][]rune, int) {
 	prefix := string(line[:pos])
+	word := prefix
 	var matches []string
-	for _, n := range c.Names {
-		if strings.HasPrefix(n, prefix) {
-			matches = append(matches, n)
+
+	if i := strings.LastIndex(prefix, " "); i != -1 {
+		var dir string
+		dir, word = filepath.Split(prefix[i+1:])
+		if dir == "" {
+			dir = "."
+		}
+		files, _ := os.ReadDir(dir)
+		for _, f := range files {
+			if strings.HasPrefix(f.Name(), word) {
+				name := f.Name()
+				if f.IsDir() {
+					name += "/"
+				}
+				matches = append(matches, name)
+			}
+		}
+	} else {
+		for _, n := range c.Names {
+			if strings.HasPrefix(n, prefix) {
+				matches = append(matches, n)
+			}
 		}
 	}
 
@@ -33,7 +53,11 @@ func (c *Completer) Do(line []rune, pos int) ([][]rune, int) {
 		os.Stdout.WriteString("\a")
 	case len(matches) == 1:
 		c.lastLine = ""
-		return [][]rune{[]rune(matches[0][len(prefix):] + " ")}, len(prefix)
+		suffix := " "
+		if strings.HasSuffix(matches[0], "/") {
+			suffix = ""
+		}
+		return [][]rune{[]rune(matches[0][len(word):] + suffix)}, len(word)
 	default:
 		lcp := matches[0]
 		for _, m := range matches[1:] {
@@ -41,9 +65,9 @@ func (c *Completer) Do(line []rune, pos int) ([][]rune, int) {
 				lcp = lcp[:len(lcp)-1]
 			}
 		}
-		if len(lcp) > len(prefix) {
+		if len(lcp) > len(word) {
 			c.lastLine = ""
-			return [][]rune{[]rune(lcp[len(prefix):])}, len(prefix)
+			return [][]rune{[]rune(lcp[len(word):])}, len(word)
 		}
 		if c.lastLine == prefix { // second tab: list
 			fmt.Printf("\r\n%s\r\n$ %s", strings.Join(matches, " "), prefix)
