@@ -14,6 +14,8 @@ import (
 
 var builtins = []string{"echo", "exit", "type", "pwd", "cd", "complete"}
 
+var completions = make(map[string]string)
+
 type Completer struct {
 	Names    []string
 	lastLine string
@@ -263,9 +265,18 @@ func handleCommand(fields []string, out, errOut io.Writer) {
 		}
 	case "complete":
 		arg := fields[1]
-		if arg == "-p" {
+		switch arg {
+		case "-p":
 			cmd := fields[2]
-			fmt.Fprintf(out, "complete: %s: no completion specification\n", cmd)
+			if p, ok := completions[cmd]; ok {
+				fmt.Fprintf(out, "complete -C '%s' %s\n", p, cmd)
+			} else {
+				fmt.Fprintf(out, "complete: %s: no completion specification\n", cmd)
+			}
+		case "-C":
+			path := fields[2]
+			cmd := fields[3]
+			completions[cmd] = path
 		}
 	}
 }
