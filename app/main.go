@@ -261,5 +261,11 @@ func handleCommand(fields []string, out, errOut io.Writer) {
 		if err := os.Chdir(path); err != nil {
 			fmt.Fprintf(errOut, "cd: %s: No such file or directory\n", path)
 		}
+	case "complete":
+		arg := fields[1]
+		if arg == "-p" {
+			cmd := fields[2]
+			fmt.Fprintf(out, "complete: %s: no completion specification\n", cmd)
+		}
 	}
 }
