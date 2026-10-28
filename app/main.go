@@ -12,7 +12,7 @@ import (
 	"github.com/chzyer/readline"
 )
 
-var builtins = []string{"echo", "exit", "type", "pwd", "cd"}
+var builtins = []string{"echo", "exit", "type", "pwd", "cd", "complete"}
 
 type Completer struct {
 	Names    []string
